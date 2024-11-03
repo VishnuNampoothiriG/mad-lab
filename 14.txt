@@ -1,0 +1,282 @@
+DBHelper.java
+
+package com.example.dbapplication;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+public class DBHelper extends SQLiteOpenHelper {
+    public DBHelper(Context context){
+        super(context,"Userdata.db",null,1);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase DB) {
+        DB.execSQL("Create Table Userdetails(name TEXT primary key, contact TEXT,dob TEXT)");
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase DB, int oldVersion, int newVersion) {
+        DB.execSQL("drop Table if exists Userdetails");
+    }
+
+    public boolean insertuserdata(String name,String contact,String dob){
+        SQLiteDatabase DB=this.getWritableDatabase();
+        ContentValues contentValues=new ContentValues();
+        contentValues.put("name",name);
+        contentValues.put("contact",contact);
+        contentValues.put("dob",dob);
+        long result=DB.insert("Userdetails", null, contentValues);
+        if(result==-1){
+            return false;
+        }
+        else{
+            return true;
+        }
+    }
+
+    public boolean updateuserdata(String name,String contact,String dob){
+        SQLiteDatabase DB=this.getWritableDatabase();
+        ContentValues contentValues=new ContentValues();
+        contentValues.put("contact",contact);
+        contentValues.put("dob",dob);
+        Cursor cursor=DB.rawQuery("Select * from Userdetails where name=?",new String[]{name});
+        if(cursor.getCount()>0){
+            long result=DB.update("Userdetails",contentValues,"name=?",new String[]{name});
+            if(result==-1){
+                return false;
+            }
+            else{
+                return true;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+
+    public boolean deletedata(String name){
+        SQLiteDatabase DB=this.getWritableDatabase();
+        Cursor cursor=DB.rawQuery("Select * from Userdetails  where name=?",new String[]{name});
+        if(cursor.getCount()>0){
+            long result=DB.delete("Userdetails","name=?",new String[]{name});
+            if(result==-1){
+                return false;
+            }
+            else{
+                return true;
+            }
+        }
+        else{
+            return false;
+        }
+    }
+
+    public Cursor getdata(){
+        SQLiteDatabase DB=this.getWritableDatabase();
+        Cursor cursor=DB.rawQuery("Select * from Userdetails",null);
+        return cursor;
+    }
+
+}
+
+
+MainActivity.java
+
+package com.example.dbapplication;
+
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
+import android.database.Cursor;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+    EditText name,contact,dob;
+    Button insert,update,delete,view;
+    DBHelper DB;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        name = findViewById(R.id.Name);
+        contact = findViewById(R.id.contact);
+        dob = findViewById(R.id.dob);
+        insert = findViewById(R.id.btnInsert);
+        update = findViewById(R.id.btnUpdate);
+        delete = findViewById(R.id.btnDelete);
+        view = findViewById(R.id.btnView);
+        DB=new DBHelper(this);
+        insert.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String nameTXT=name.getText().toString();
+                String contactTXT=contact.getText().toString();
+                String dobTXT=dob.getText().toString();
+                Boolean checkinsertdata=DB.insertuserdata(nameTXT,contactTXT,dobTXT);
+                if(checkinsertdata==true)
+                    Toast.makeText(MainActivity.this, "New Entry Inserted", Toast.LENGTH_SHORT).show();
+                else
+                    Toast.makeText(MainActivity.this, "Not Inserted", Toast.LENGTH_SHORT).show();
+            }
+        });
+        update.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String nameTXT=name.getText().toString();
+                String contactTXT=contact.getText().toString();
+                String dobTXT=dob.getText().toString();
+                Boolean checkupdatedata=DB.updateuserdata(nameTXT,contactTXT,dobTXT);
+                if (checkupdatedata==true)
+                    Toast.makeText(MainActivity.this, "Entry Updated!!!", Toast.LENGTH_SHORT).show();
+                else
+                    Toast.makeText(MainActivity.this, "Not Updated", Toast.LENGTH_SHORT).show();
+            }
+        });
+        delete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String nameTXT=name.getText().toString();
+                Boolean checkdeletedata=DB.deletedata(nameTXT);
+                if (checkdeletedata)
+                    Toast.makeText(MainActivity.this, "Entry Deleted", Toast.LENGTH_SHORT).show();
+                else
+                    Toast.makeText(MainActivity.this, "Not Deleted", Toast.LENGTH_SHORT).show();
+            }
+        });
+        view.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Cursor result=DB.getdata();
+                if (result.getCount()==0){
+                    Toast.makeText(MainActivity.this, "No Entry Found!!", Toast.LENGTH_SHORT).show();
+                }
+                else{
+                    StringBuffer buffer=new StringBuffer();
+                    while(result.moveToNext()){
+                        buffer.append("Name:"+result.getString(0)+"\n");
+                        buffer.append("Contact:"+result.getString(1)+"\n");
+                        buffer.append("DOB:"+result.getString(2)+"\n");
+                    }
+                    AlertDialog.Builder builder=new AlertDialog.Builder(MainActivity.this);
+                    builder.setCancelable(true);
+                    builder.setTitle("User Entries");
+                    builder.setMessage(buffer.toString());
+                    builder.show();
+
+                }
+            }
+        });
+    }
+}
+
+
+
+activity_main.xml
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <EditText
+        android:id="@+id/contact"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
+        android:ems="10"
+        android:hint="Contact Number"
+        android:inputType="textPersonName"
+        android:text=""
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.542"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/Name" />
+
+    <EditText
+        android:id="@+id/Name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="136dp"
+        android:ems="10"
+        android:hint="Enter your Name"
+        android:inputType="textPersonName"
+
+        android:text=""
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.547"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/dob"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="39dp"
+        android:ems="10"
+        android:hint="Date of Birth"
+        android:inputType="textPersonName"
+        android:text=""
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.547"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/contact" />
+
+    <Button
+        android:id="@+id/btnInsert"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:text="INSERT"
+        app:layout_constraintBaseline_toBaselineOf="@+id/btnUpdate"
+        app:layout_constraintEnd_toStartOf="@+id/btnUpdate"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <Button
+        android:id="@+id/btnUpdate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="28dp"
+        android:layout_marginBottom="61dp"
+        android:text="UPDATE"
+        app:layout_constraintBottom_toTopOf="@+id/btnView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/btnInsert" />
+
+    <Button
+        android:id="@+id/btnDelete"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="53dp"
+        android:text="DELETE"
+        app:layout_constraintBaseline_toBaselineOf="@+id/btnView"
+        app:layout_constraintEnd_toStartOf="@+id/btnView" />
+
+    <Button
+        android:id="@+id/btnView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="132dp"
+        android:text="VIEW"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/dob"
+        app:layout_constraintStart_toStartOf="@+id/btnUpdate" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_begin="20dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
